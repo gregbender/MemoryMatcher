@@ -1,48 +1,154 @@
 package com.gregbender.memorymatcher;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
+import android.os.StrictMode;
+import android.support.v4.content.LocalBroadcastManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
-import android.widget.Button;
-import android.widget.ImageButton;
+import android.widget.AdapterView;
+import android.widget.GridView;
 import android.widget.LinearLayout;
-import android.widget.TableRow;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
+import org.greenrobot.eventbus.ThreadMode;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
+
+import static java.security.AccessController.getContext;
 
 public class MainActivity extends AppCompatActivity {
 
-    int NUM_OF_IMAGES = 9;
 
-    View.OnClickListener imageClick = new View.OnClickListener() {
+    @Override
+    public void onStart() {
+        super.onStart();
+        EventBus.getDefault().register(this);
+    }
+
+    @Override
+    public void onStop() {
+        EventBus.getDefault().unregister(this);
+        super.onStop();
+    }
+
+    int NUM_OF_CARDS = 9;
+
+    List<Card> allCards = new ArrayList<Card>();
+
+    public int getCardsFaceUpCount() {
+        int count = 0;
+        for (Card i : allCards) {
+            if (i.isFaceUp()) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    View.OnClickListener cardClickHandler = new View.OnClickListener() {
         @Override
         public void onClick(View view) {
             Card clickedCard = (Card)view;
-            if (clickedCard.faceDown) {
-                clickedCard.setImageResource(R.drawable.dog);
-            }
-            else {
-                clickedCard.setImageResource(0);
-            }
-            clickedCard.faceDown = !clickedCard.faceDown;
 
+            if (getCardsFaceUpCount() <= 1 && clickedCard.isFaceDown() && !clickedCard.matched) {
+                clickedCard.flip();
+                EventBus.getDefault().post(new MatchCheckEvent("1"));
+            }
         }
     };
+
+    // This method will be called when a MessageEvent is posted (in the UI thread for Toast)
+    @Subscribe(threadMode = ThreadMode.BACKGROUND)
+    public void onMessageEvent(MatchCheckEvent event) {
+
+        if (event.message.equals("1")) {
+            if (getCardsFaceUpCount() == 2) {
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                EventBus.getDefault().post(new MatchCheckEvent("2"));
+            }
+        }
+    }
+
+    @Subscribe(threadMode = ThreadMode.MAIN)
+    public void checkForMatch(MatchCheckEvent event) {
+
+        if (event.message.equals("2")) {
+
+            Card first = null;
+            Card second = null;
+
+                for (Card i : allCards) {
+                    if (i.isFaceUp()) {
+
+                        if (first == null) {
+                            first = i;
+                        }
+                        else if (second == null) {
+                            second = i;
+                        }
+
+                        i.flip();
+                    }
+
+
+
+                }
+
+                if (first.pairId == second.pairId) {
+                    first.setImageResource(0);
+                    second.setImageResource(0);
+                    first.matched = true;
+                    second.matched = true;
+                }
+                else {
+                    first.flipDown();
+                    second.flipDown();
+                }
+
+
+            }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        for (int i = 0; i < NUM_OF_IMAGES; i++) {
-            Card newImageButton = new Card(this);
-            newImageButton.setPadding(50, 50, 50, 50);
-            newImageButton.setOnClickListener(imageClick);
-            newImageButton.setActivated(false);
-            ((LinearLayout)findViewById(R.id.mainlayout)).addView(newImageButton);
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
+
+        // create all the cards
+        for (int i = 0; i < NUM_OF_CARDS; i++) {
+            int pairId = i % 2;
+
+            Card newCard = new Card(this, pairId);
+            newCard.setOnClickListener(cardClickHandler);
+
+            allCards.add(newCard);
 
         }
+        // shuffle and randomly add them to the view
+        Collections.shuffle(allCards);
 
+        GridView gridview = (GridView) findViewById(R.id.mainlayout);
+        gridview.setAdapter(new ImageAdapter(this, allCards));
     }
-
-
-
 }
