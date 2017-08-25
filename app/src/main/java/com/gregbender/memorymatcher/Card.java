@@ -66,6 +66,20 @@ public class Card extends ImageButton {
         }
         this.flipDown();
     }
+    public boolean isMatch (Card otherCard) {
+        if (this.pairId == otherCard.pairId) {
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+    public void markAsMatch() {
+        this.setImageResource(0);
+        this.matched = true;
+    }
+
+
     public boolean isFaceUp() {
         return !faceDown;
     }
