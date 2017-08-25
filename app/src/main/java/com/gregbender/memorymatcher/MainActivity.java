@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.media.MediaPlayer;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -14,6 +15,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.Chronometer;
 import android.widget.GridView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -45,10 +47,10 @@ public class MainActivity extends AppCompatActivity {
         super.onStop();
     }
 
-    int NUM_OF_CARDS = 9;
+    int NUM_OF_PAIRS = 5;
 
     List<Card> allCards = new ArrayList<Card>();
-
+    boolean gameStarted = false;
     public int getCardsFaceUpCount() {
         int count = 0;
         for (Card i : allCards) {
@@ -63,6 +65,31 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onClick(View view) {
             Card clickedCard = (Card)view;
+
+
+            if (!gameStarted) {
+                ((Chronometer)findViewById(R.id.chronometer3)).start();
+            }
+
+
+            MediaPlayer mp = MediaPlayer.create(MainActivity.this, R.raw.staple);
+            mp.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+
+                @Override
+                public void onCompletion(MediaPlayer mp) {
+                    // TODO Auto-generated method stub
+                    mp.release();
+                }
+
+            });
+            mp.start();
+
+
+
+
+
+
+
 
             if (getCardsFaceUpCount() <= 1 && clickedCard.isFaceDown() && !clickedCard.matched) {
                 clickedCard.flip();
@@ -117,6 +144,17 @@ public class MainActivity extends AppCompatActivity {
                     second.setImageResource(0);
                     first.matched = true;
                     second.matched = true;
+                    MediaPlayer mp = MediaPlayer.create(MainActivity.this, R.raw.correct);
+                    mp.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+
+                        @Override
+                        public void onCompletion(MediaPlayer mp) {
+                            // TODO Auto-generated method stub
+                            mp.release();
+                        }
+
+                    });
+                    mp.start();
                 }
                 else {
                     first.flipDown();
@@ -136,13 +174,15 @@ public class MainActivity extends AppCompatActivity {
         StrictMode.setThreadPolicy(policy);
 
         // create all the cards
-        for (int i = 0; i < NUM_OF_CARDS; i++) {
-            int pairId = i % 2;
+        for (int i = 0; i < NUM_OF_PAIRS; i++) {
 
-            Card newCard = new Card(this, pairId);
-            newCard.setOnClickListener(cardClickHandler);
+            Card newCardOne = new Card(this, i);
+            newCardOne.setOnClickListener(cardClickHandler);
+            allCards.add(newCardOne);
 
-            allCards.add(newCard);
+            Card newCardTwo = new Card(this, i);
+            newCardTwo.setOnClickListener(cardClickHandler);
+            allCards.add(newCardTwo);
 
         }
         // shuffle and randomly add them to the view
