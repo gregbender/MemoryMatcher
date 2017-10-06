@@ -19,7 +19,7 @@ class ImageAdapter extends BaseAdapter {
     }
 
     public int getCount() {
-        return 9;
+        return allcards.size();
     }
 
     public Object getItem(int position) {
